@@ -73,7 +73,8 @@
 
     .source{
       position:absolute;
-      inset:0;
+      left:50%;
+      top:50%;
       transform-origin:center center;
       will-change:transform;
       background:#000;
@@ -351,7 +352,7 @@
 <script>
 (() => {
   const KEY = 'multi-viewer-v3';
-  const blank = () => ({url:'',embed:'',type:'generic',title:'',x:0,y:0,scale:1});
+  const blank = () => ({url:'',embed:'',type:'generic',title:'',x:0,y:0,scale:1,renderScale:4});
 
   const state = {
     panes:[blank(),blank(),blank(),blank()],
@@ -425,7 +426,7 @@
       if(id){
         id=id.replace(/[^a-zA-Z0-9_-]/g,'');
         const params=new URLSearchParams({
-          autoplay:'1',mute:'1',controls:'1',playsinline:'1',rel:'0',enablejsapi:'1'
+          autoplay:'1',mute:'1',controls:'1',playsinline:'1',rel:'0',enablejsapi:'1',origin:location.origin
         });
         return {url:value,embed:'https://www.youtube.com/embed/'+id+'?'+params,title:'YouTube',type:'youtube'};
       }
@@ -496,7 +497,7 @@
 
       const hud=document.createElement('div');
       hud.className='crop-hud';
-      hud.innerHTML='<span>Drag to pan · wheel to zoom · Esc to finish</span><button data-fit="'+i+'">Fit</button><button data-reset="'+i+'">Reset</button>';
+      hud.innerHTML='<span>Drag / arrows = 1px · Shift+arrows = 10px · wheel = zoom · Esc = finish</span><button data-fit="'+i+'">Fit</button><button data-reset="'+i+'">Reset</button>';
       pane.appendChild(hud);
 
       grid.appendChild(pane);
@@ -526,6 +527,11 @@
     frames[i]=frame;
 
     frame.addEventListener('load',()=>{
+      // Re-assert audio state after every load/navigation for supported players.
+      setTimeout(syncAudio,80);
+      setTimeout(syncAudio,350);
+      setTimeout(syncAudio,1000);
+
       // Same-origin pages can expose their current URL; cross-origin pages intentionally cannot.
       try{
         const href=frame.contentWindow.location.href;
@@ -537,8 +543,8 @@
         }
       }catch(_){}
       if(state.panes[i].type==='youtube') {
-        setTimeout(syncAudio,250);
-        setTimeout(syncAudio,850);
+        setTimeout(syncAudio,1600);
+        setTimeout(syncAudio,2800);
       }
     });
   }
@@ -575,6 +581,11 @@
         '</div>'+
         '<div class="slot-actions">'+
           '<button class="crop-btn" data-settings-crop="'+i+'" '+(p.embed?'':'disabled')+'>Crop & Fit</button>'+
+          '<select class="clear-btn" data-render-scale="'+i+'" title="Virtual render resolution">'+
+            '<option value="1" '+(p.renderScale===1?'selected':'')+'>1× render</option>'+
+            '<option value="2" '+(p.renderScale===2?'selected':'')+'>2× render</option>'+
+            '<option value="4" '+(p.renderScale===4?'selected':'')+'>4× render</option>'+
+          '</select>'+
           '<button class="clear-btn" data-clear="'+i+'" '+(p.embed?'':'disabled')+'>Clear</button>'+
         '</div>';
       slots.appendChild(row);
@@ -625,9 +636,14 @@
     const p=state.panes[i];
     const source=document.querySelector('[data-source="'+i+'"]');
     if(!source) return;
-    source.style.transform='translate('+p.x+'px,'+p.y+'px) scale('+p.scale+')';
+    const rs=Math.min(4,Math.max(1,Number(p.renderScale)||4));
+    source.style.width=(rs*100)+'%';
+    source.style.height=(rs*100)+'%';
+    source.style.marginLeft=(-rs*50)+'%';
+    source.style.marginTop=(-rs*50)+'%';
+    source.style.transform='translate('+p.x+'px,'+p.y+'px) scale('+(p.scale/rs)+')';
     const zoom=document.querySelector('[data-zoom="'+i+'"]');
-    if(zoom) zoom.textContent=Math.round(p.scale*100)+'%';
+    if(zoom) zoom.textContent=Math.round(p.scale*100)+'% · '+rs+'× render';
   }
 
   function enterCrop(i){
@@ -635,7 +651,7 @@
     state.cropIndex=i;
     settings.classList.remove('open');
     for(let n=0;n<4;n++) updatePaneChrome(n);
-    toast('Crop mode · drag, wheel to zoom, Esc to finish');
+    toast('Crop mode · arrows nudge 1px · Shift+arrows 10px');
   }
 
   function exitCrop(){
@@ -667,7 +683,11 @@
   function postYT(frame,func){
     if(!frame) return;
     const msg=JSON.stringify({event:'command',func,args:[]});
-    try{frame.contentWindow.postMessage(msg,'*')}catch(_){}
+    [0,80,220,600].forEach(delay=>setTimeout(()=>{
+      try{frame.contentWindow.postMessage(msg,'https://www.youtube.com')}catch(_){
+        try{frame.contentWindow.postMessage(msg,'*')}catch(__){}
+      }
+    },delay));
   }
 
   function syncAudio(){
@@ -710,6 +730,16 @@
 
     const clear=e.target.closest('[data-clear]');
     if(clear){clearPane(Number(clear.dataset.clear));return}
+  });
+
+  slots.addEventListener('change',e=>{
+    const sel=e.target.closest('[data-render-scale]');
+    if(!sel) return;
+    const i=Number(sel.dataset.renderScale);
+    state.panes[i].renderScale=Number(sel.value)||4;
+    applyTransform(i);
+    save();
+    toast('Pane '+(i+1)+' virtual render set to '+state.panes[i].renderScale+'×');
   });
 
   slots.addEventListener('keydown',e=>{
@@ -798,6 +828,19 @@
       }else{
         shiftAt=now;
       }
+      return;
+    }
+
+    if(state.cropIndex!=null && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+      e.preventDefault();
+      const p=state.panes[state.cropIndex];
+      const step=e.shiftKey?10:1;
+      if(e.key==='ArrowLeft') p.x-=step;
+      if(e.key==='ArrowRight') p.x+=step;
+      if(e.key==='ArrowUp') p.y-=step;
+      if(e.key==='ArrowDown') p.y+=step;
+      applyTransform(state.cropIndex);
+      save();
       return;
     }
 
