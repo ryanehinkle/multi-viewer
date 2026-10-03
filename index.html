@@ -3,712 +3,825 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#09090b" />
+  <meta name="theme-color" content="#07080a" />
   <title>Multi Viewer</title>
   <style>
     :root{
       color-scheme:dark;
-      --bg:#08090b;
+      --bg:#07080a;
       --panel:#0d0f13;
-      --panel-2:#12151a;
-      --line:rgba(255,255,255,.09);
-      --line-strong:rgba(255,255,255,.16);
-      --text:#f4f6f8;
-      --muted:#8e949d;
+      --panel2:#12151a;
+      --line:rgba(255,255,255,.10);
+      --line2:rgba(255,255,255,.18);
+      --text:#f3f5f7;
+      --muted:#90969f;
       --accent:#f2a3ab;
-      --accent-soft:rgba(242,163,171,.16);
-      --accent-glow:rgba(242,163,171,.22);
-      --shadow:0 24px 80px rgba(0,0,0,.48);
-      --radius:15px;
+      --accent-soft:rgba(242,163,171,.18);
+      --shadow:0 24px 90px rgba(0,0,0,.52);
+      --gap-y:4px;
+      --gap-x:7.111111px;
     }
-
     *{box-sizing:border-box}
-    html,body{width:100%;height:100%;margin:0;background:var(--bg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
     button,input{font:inherit}
     button{color:inherit}
-    body{background:
-      radial-gradient(circle at 50% -20%,rgba(255,255,255,.055),transparent 33%),
-      var(--bg);
-    }
 
-    .app{
-      height:100dvh;
+    body{
       display:grid;
-      grid-template-rows:54px minmax(0,1fr);
-      gap:8px;
-      padding:8px;
+      place-items:center;
+      background:
+        radial-gradient(circle at 50% 0%,rgba(255,255,255,.035),transparent 34%),
+        #07080a;
     }
 
-    .topbar{
+    .stage{
       position:relative;
-      z-index:20;
-      height:54px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:0 14px 0 16px;
-      border:1px solid var(--line);
-      border-radius:13px;
-      background:rgba(14,16,20,.84);
-      backdrop-filter:blur(18px);
-      box-shadow:0 10px 32px rgba(0,0,0,.18);
+      width:min(100vw,calc(100vh * 16 / 9));
+      height:min(100vh,calc(100vw * 9 / 16));
+      aspect-ratio:16/9;
     }
-
-    .brand{display:flex;align-items:center;gap:10px;min-width:0}
-    .brand-mark{
-      width:26px;height:26px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;
-    }
-    .brand-mark i{display:block;border-radius:3px;background:#e8eaed;opacity:.92}
-    .brand-copy{display:flex;align-items:baseline;gap:9px;white-space:nowrap}
-    .brand-title{font-weight:730;letter-spacing:-.025em;font-size:15px}
-    .brand-sub{color:var(--muted);font-size:11px;font-weight:560;letter-spacing:.02em}
-
-    .top-actions{display:flex;align-items:center;gap:8px}
-    .btn{
-      appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.045);
-      height:34px;border-radius:9px;padding:0 11px;display:inline-flex;align-items:center;justify-content:center;
-      gap:7px;cursor:pointer;transition:.18s ease;color:#dfe3e7;font-size:12px;font-weight:650;
-    }
-    .btn:hover{background:rgba(255,255,255,.08);border-color:var(--line-strong)}
-    .btn:active{transform:translateY(1px)}
-    .btn svg{width:15px;height:15px;display:block}
-    .btn.icon{width:34px;padding:0}
-    .btn.danger:hover{background:rgba(242,163,171,.10);border-color:rgba(242,163,171,.28);color:#ffc4ca}
 
     .grid{
-      min-height:0;
+      position:absolute;
+      inset:0;
       display:grid;
       grid-template-columns:minmax(0,1fr) minmax(0,1fr);
       grid-template-rows:minmax(0,1fr) minmax(0,1fr);
-      gap:8px;
-      place-items:center;
-      overflow:hidden;
+      column-gap:var(--gap-x);
+      row-gap:var(--gap-y);
     }
 
     .pane{
       position:relative;
-      width:100%;
-      max-height:100%;
-      aspect-ratio:16/9;
-      min-width:0;min-height:0;
       overflow:hidden;
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      background:#050607;
-      box-shadow:inset 0 0 0 1px rgba(255,255,255,.012);
-      transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+      background:#020303;
+      border:1px solid rgba(255,255,255,.075);
+      border-radius:8px;
+      aspect-ratio:16/9;
       isolation:isolate;
+      transition:border-color .16s ease,box-shadow .16s ease;
     }
     .pane.audio-live{
       border-color:var(--accent);
-      box-shadow:0 0 0 1px var(--accent-soft),0 0 24px var(--accent-glow);
+      box-shadow:inset 0 0 0 1px rgba(242,163,171,.12),0 0 18px rgba(242,163,171,.12);
     }
-    .pane.focused{
-      position:fixed;inset:8px;z-index:70;border-radius:16px;
+    .pane.crop-active{
+      z-index:30;
+      border-color:rgba(255,255,255,.36);
+      box-shadow:0 0 0 2px rgba(255,255,255,.08),0 18px 60px rgba(0,0,0,.42);
+    }
+
+    .source{
+      position:absolute;
+      inset:0;
+      transform-origin:center center;
+      will-change:transform;
+      background:#000;
+    }
+    .source iframe{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      border:0;
+      background:#000;
     }
 
     .empty{
-      position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-      gap:13px;cursor:pointer;background:
-      radial-gradient(circle at 50% 45%,rgba(255,255,255,.03),transparent 38%),
-      linear-gradient(135deg,rgba(255,255,255,.012),transparent 45%);
-      transition:.2s ease;
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      pointer-events:none;
+      background:
+        radial-gradient(circle at 50% 50%,rgba(255,255,255,.025),transparent 42%),
+        #050608;
     }
-    .empty:hover{background-color:rgba(255,255,255,.018)}
-    .plus{
-      width:62px;height:62px;border-radius:50%;display:grid;place-items:center;
-      border:1px solid var(--line-strong);background:rgba(255,255,255,.045);
-      color:#dadddf;font-size:34px;font-weight:250;line-height:1;transition:.2s ease;
-      box-shadow:0 12px 34px rgba(0,0,0,.18);
+    .empty-inner{text-align:center;color:#767c84}
+    .empty-plus{
+      width:52px;height:52px;margin:0 auto 10px;border-radius:50%;
+      border:1px solid rgba(255,255,255,.13);display:grid;place-items:center;
+      font-size:28px;font-weight:250;color:#b8bdc3;background:rgba(255,255,255,.035);
     }
-    .empty:hover .plus{transform:scale(1.045);background:rgba(255,255,255,.075);border-color:rgba(255,255,255,.23)}
-    .empty-label{color:#9298a0;font-size:12px;font-weight:650;letter-spacing:.015em}
+    .empty-text{font-size:11px;font-weight:650;letter-spacing:.02em}
 
-    .embed-wrap{position:absolute;inset:0;background:#000}
-    .embed-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
-    .click-layer{
-      position:absolute;inset:0;z-index:4;cursor:pointer;background:transparent;
+    .audio-button{
+      position:absolute;
+      z-index:12;
+      left:9px;
+      bottom:9px;
+      width:30px;
+      height:30px;
+      border:1px solid rgba(255,255,255,.11);
+      border-radius:8px;
+      display:grid;
+      place-items:center;
+      background:rgba(8,9,11,.70);
+      backdrop-filter:blur(12px);
+      color:#d8dce0;
+      cursor:pointer;
+      opacity:0;
+      transform:translateY(3px);
+      transition:.16s ease;
     }
-    .pane:hover .click-layer{inset:42px 0 0}
+    .pane:hover .audio-button,.pane.audio-live .audio-button{opacity:1;transform:none}
+    .audio-live .audio-button{
+      color:#ffd9dd;
+      border-color:rgba(242,163,171,.34);
+      background:rgba(49,24,28,.64);
+    }
+    .audio-button:hover{background:rgba(30,33,38,.92)}
+    .audio-button svg{width:15px;height:15px}
 
-    .pane-toolbar{
-      position:absolute;z-index:8;left:8px;right:8px;top:8px;
-      display:flex;align-items:center;justify-content:space-between;gap:8px;
-      opacity:0;transform:translateY(-4px);pointer-events:none;transition:.18s ease;
+    .hover-tools{
+      position:absolute;
+      z-index:12;
+      top:8px;
+      right:8px;
+      display:flex;
+      gap:5px;
+      opacity:0;
+      transform:translateY(-3px);
+      pointer-events:none;
+      transition:.16s ease;
     }
-    .pane:hover .pane-toolbar{opacity:1;transform:none;pointer-events:auto}
-    .pane-title{
-      max-width:min(48%,320px);height:29px;border-radius:8px;padding:0 10px;
-      display:flex;align-items:center;gap:7px;overflow:hidden;
-      background:rgba(8,9,11,.78);border:1px solid rgba(255,255,255,.10);backdrop-filter:blur(12px);
-      color:#dadddf;font-size:11px;font-weight:650;white-space:nowrap;text-overflow:ellipsis;
+    .pane:hover .hover-tools{opacity:1;transform:none;pointer-events:auto}
+    .hover-tool{
+      height:29px;
+      padding:0 9px;
+      border:1px solid rgba(255,255,255,.11);
+      border-radius:8px;
+      background:rgba(8,9,11,.72);
+      backdrop-filter:blur(12px);
+      color:#cdd1d6;
+      font-size:10px;
+      font-weight:700;
+      cursor:pointer;
     }
-    .pane-title span{overflow:hidden;text-overflow:ellipsis}
-    .live-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(242,163,171,.12);flex:0 0 auto}
-    .pane-tools{display:flex;gap:5px}
-    .mini{
-      width:29px;height:29px;border-radius:8px;border:1px solid rgba(255,255,255,.10);
-      background:rgba(8,9,11,.78);backdrop-filter:blur(12px);display:grid;place-items:center;cursor:pointer;
-      color:#dadddf;transition:.15s ease;
+    .hover-tool:hover{background:rgba(30,33,38,.94);border-color:rgba(255,255,255,.19)}
+
+    .crop-layer{
+      display:none;
+      position:absolute;
+      inset:0;
+      z-index:20;
+      cursor:grab;
+      touch-action:none;
+      background:rgba(255,255,255,.008);
     }
-    .mini:hover{background:rgba(31,34,40,.92);border-color:rgba(255,255,255,.18)}
-    .mini svg{width:14px;height:14px}
-    .audio-badge{
-      position:absolute;z-index:7;left:10px;bottom:10px;width:28px;height:28px;border-radius:8px;
-      display:grid;place-items:center;background:rgba(8,9,11,.72);border:1px solid rgba(255,255,255,.09);
-      backdrop-filter:blur(12px);color:#cfd3d8;opacity:0;transition:.18s ease;
+    .crop-active .crop-layer{display:block}
+    .crop-layer.dragging{cursor:grabbing}
+    .crop-hud{
+      display:none;
+      position:absolute;
+      z-index:24;
+      left:50%;
+      bottom:11px;
+      transform:translateX(-50%);
+      align-items:center;
+      gap:7px;
+      padding:6px;
+      border:1px solid rgba(255,255,255,.13);
+      border-radius:10px;
+      background:rgba(8,9,11,.82);
+      backdrop-filter:blur(14px);
+      box-shadow:0 12px 35px rgba(0,0,0,.28);
+      white-space:nowrap;
+    }
+    .crop-active .crop-hud{display:flex}
+    .crop-hud span{font-size:10px;color:#a9afb7;padding:0 5px}
+    .crop-hud button{
+      height:28px;border:1px solid rgba(255,255,255,.10);border-radius:7px;
+      background:rgba(255,255,255,.05);padding:0 9px;cursor:pointer;
+      font-size:10px;font-weight:700;color:#d5d9de;
+    }
+    .crop-hud button:hover{background:rgba(255,255,255,.09)}
+    .crop-zoom{
+      position:absolute;
+      z-index:24;
+      top:10px;
+      left:10px;
+      display:none;
+      padding:6px 8px;
+      border-radius:8px;
+      background:rgba(8,9,11,.78);
+      border:1px solid rgba(255,255,255,.11);
+      backdrop-filter:blur(12px);
+      font-size:10px;
+      font-weight:700;
+      color:#bcc2c9;
       pointer-events:none;
     }
-    .audio-live .audio-badge{opacity:1;color:#ffd7db;border-color:rgba(242,163,171,.30);background:rgba(45,20,24,.56)}
-    .audio-badge svg{width:14px;height:14px}
+    .crop-active .crop-zoom{display:block}
 
-    .modal{
-      position:fixed;inset:0;z-index:100;display:none;place-items:center;padding:18px;
-      background:rgba(2,3,4,.72);backdrop-filter:blur(14px);
+    .gear{
+      position:fixed;
+      z-index:100;
+      top:12px;
+      right:12px;
+      width:38px;height:38px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.13);
+      background:rgba(12,14,18,.84);
+      backdrop-filter:blur(16px);
+      display:grid;place-items:center;
+      color:#d8dce1;
+      cursor:pointer;
+      box-shadow:0 10px 32px rgba(0,0,0,.28);
+      opacity:0;
+      transform:translateY(-7px) scale(.96);
+      pointer-events:none;
+      transition:.18s ease;
     }
-    .modal.open{display:grid}
-    .dialog{
-      width:min(1120px,96vw);height:min(760px,92vh);display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;
-      border:1px solid rgba(255,255,255,.13);border-radius:18px;overflow:hidden;background:#0b0d10;
+    .gear.visible{opacity:1;transform:none;pointer-events:auto}
+    .gear:hover{background:rgba(30,33,39,.94);border-color:rgba(255,255,255,.22)}
+    .gear svg{width:18px;height:18px}
+
+    .settings{
+      position:fixed;
+      z-index:110;
+      top:58px;
+      right:12px;
+      width:min(460px,calc(100vw - 24px));
+      max-height:calc(100vh - 72px);
+      overflow:auto;
+      padding:12px;
+      border:1px solid rgba(255,255,255,.13);
+      border-radius:14px;
+      background:rgba(13,15,19,.94);
+      backdrop-filter:blur(22px);
       box-shadow:var(--shadow);
+      opacity:0;
+      transform:translateY(-7px) scale(.985);
+      pointer-events:none;
+      transition:.18s ease;
     }
-    .dialog-head{
-      height:52px;padding:0 14px 0 17px;display:flex;align-items:center;justify-content:space-between;
-      border-bottom:1px solid var(--line);background:#101216;
+    .settings.open{opacity:1;transform:none;pointer-events:auto}
+    .settings-head{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:2px 3px 11px;
     }
-    .dialog-title{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:720}
-    .slot-chip{font-size:10px;color:#b1b6bd;border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:999px;padding:4px 7px;font-weight:700}
-    .dialog-close{width:31px;height:31px;border:0;border-radius:8px;background:transparent;cursor:pointer;color:#aeb4bb;display:grid;place-items:center}
-    .dialog-close:hover{background:rgba(255,255,255,.07);color:white}
-
-    .url-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;padding:10px;border-bottom:1px solid var(--line);background:#0d0f13}
-    .urlbox{
-      height:39px;border-radius:10px;border:1px solid rgba(255,255,255,.11);background:#080a0d;color:#f3f4f6;
-      padding:0 13px;outline:none;font-size:12px;transition:.15s ease;
+    .settings-title{font-size:13px;font-weight:760;letter-spacing:-.01em}
+    .settings-hint{font-size:10px;color:#727983}
+    .slot{
+      padding:10px;
+      border:1px solid rgba(255,255,255,.085);
+      border-radius:11px;
+      background:rgba(255,255,255,.025);
     }
-    .urlbox:focus{border-color:rgba(242,163,171,.55);box-shadow:0 0 0 3px rgba(242,163,171,.08)}
-    .primary{background:#eceff2;color:#101216;border-color:#eceff2}
-    .primary:hover{background:white;border-color:white}
-    .primary:disabled{opacity:.48;cursor:not-allowed}
-
-    .preview-shell{position:relative;min-height:0;background:#020303;overflow:hidden}
-    .modal.preview-max{padding:0;background:#020303}
-    .modal.preview-max .dialog{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;border:0;border-radius:0;grid-template-rows:minmax(0,1fr);background:#020303}
-    .modal.preview-max .dialog-head,
-    .modal.preview-max .url-row,
-    .modal.preview-max .dialog-foot{display:none}
-    .modal.preview-max .preview-shell{position:absolute;inset:0}
-    .modal.preview-max .frame-note{display:none}
-    .preview-shell iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
-    .preview-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:28px;color:#858b94}
-    .preview-empty strong{display:block;color:#d7dadd;font-size:15px;margin-bottom:7px}
-    .preview-empty span{font-size:12px;line-height:1.55;max-width:520px;display:block}
-    .frame-note{
-      position:absolute;z-index:4;left:50%;bottom:12px;transform:translateX(-50%);
-      padding:7px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.10);background:rgba(8,9,11,.78);
-      color:#aeb3ba;font-size:10px;font-weight:620;backdrop-filter:blur(12px);pointer-events:none;opacity:.92;
+    .slot + .slot{margin-top:8px}
+    .slot-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .slot-title{font-size:11px;font-weight:740;color:#d8dce1}
+    .slot-status{font-size:9px;color:#737a84}
+    .url-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}
+    .url{
+      min-width:0;
+      height:36px;
+      border:1px solid rgba(255,255,255,.11);
+      border-radius:8px;
+      outline:none;
+      padding:0 10px;
+      background:#080a0d;
+      color:#f1f3f5;
+      font-size:11px;
     }
-
-    .dialog-foot{
-      min-height:54px;padding:8px 10px 8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;
-      border-top:1px solid var(--line);background:#101216;
+    .url:focus{border-color:rgba(242,163,171,.48);box-shadow:0 0 0 3px rgba(242,163,171,.07)}
+    .apply,.crop-btn,.clear-btn{
+      height:36px;border-radius:8px;border:1px solid rgba(255,255,255,.11);
+      background:rgba(255,255,255,.05);padding:0 11px;
+      cursor:pointer;font-size:10px;font-weight:720;color:#d9dde1;
     }
-    .hint{color:#777e87;font-size:10px;line-height:1.35}
-    kbd{border:1px solid rgba(255,255,255,.13);border-bottom-color:rgba(255,255,255,.20);background:rgba(255,255,255,.05);border-radius:5px;padding:2px 5px;color:#c7cbd0;font:600 10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace}
-    .foot-actions{display:flex;gap:7px;flex:0 0 auto}
+    .apply{background:#eef0f2;color:#0d0f12;border-color:#eef0f2}
+    .apply:hover{background:white}
+    .slot-actions{display:flex;gap:7px;margin-top:7px}
+    .crop-btn{flex:1}
+    .crop-btn:hover,.clear-btn:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.18)}
+    .clear-btn{color:#e4aeb4}
+    .settings-note{
+      padding:10px 3px 2px;
+      color:#777e87;
+      font-size:9px;
+      line-height:1.45;
+    }
 
     .toast{
-      position:fixed;z-index:150;left:50%;bottom:18px;transform:translate(-50%,15px);
-      padding:9px 12px;border-radius:9px;border:1px solid var(--line);background:rgba(17,19,23,.92);
-      box-shadow:0 14px 40px rgba(0,0,0,.35);backdrop-filter:blur(16px);color:#d8dce1;font-size:11px;font-weight:650;
-      opacity:0;pointer-events:none;transition:.2s ease;
+      position:fixed;z-index:160;left:50%;bottom:16px;transform:translate(-50%,12px);
+      padding:8px 11px;border:1px solid rgba(255,255,255,.12);border-radius:8px;
+      background:rgba(14,16,20,.92);backdrop-filter:blur(14px);
+      color:#d4d8dd;font-size:10px;font-weight:680;
+      opacity:0;pointer-events:none;transition:.18s ease;
     }
     .toast.show{opacity:1;transform:translate(-50%,0)}
 
-    .fullscreen-exit{
-      display:none;position:fixed;z-index:90;right:15px;top:15px;
-    }
-    .pane.focused .fullscreen-exit{display:flex}
-
-    @media (max-width:760px){
-      .app{grid-template-rows:48px minmax(0,1fr);padding:5px;gap:5px}
-      .topbar{height:48px;padding:0 10px}
-      .brand-sub{display:none}
-      .grid{gap:5px}
-      .pane{border-radius:10px}
-      .top-actions .label{display:none}
-      .url-row{grid-template-columns:minmax(0,1fr) auto}
-      .url-row .external-btn{grid-column:1/-1}
-      .dialog{height:94vh;width:98vw}
-      .hint{display:none}
+    @media(max-width:700px){
+      .pane{border-radius:5px}
+      .settings{top:55px}
+      .hover-tool{padding:0 7px}
+      .crop-hud span{display:none}
     }
   </style>
 </head>
 <body>
-  <main class="app">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-        <div class="brand-copy">
-          <div class="brand-title">Multi Viewer</div>
-          <div class="brand-sub">4-up live view</div>
-        </div>
-      </div>
-      <div class="top-actions">
-        <button class="btn" id="clearAll" title="Clear all panes">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13"/><path d="M10 11v5m4-5v5"/></svg>
-          <span class="label">Clear all</span>
-        </button>
-      </div>
-    </header>
-
-    <section class="grid" id="grid" aria-label="Four stream multiview"></section>
+  <main class="stage">
+    <section class="grid" id="grid" aria-label="Four-view multiviewer"></section>
   </main>
 
-  <section class="modal" id="setupModal" aria-hidden="true">
-    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
-      <div class="dialog-head">
-        <div class="dialog-title" id="dialogTitle">Add a view <span class="slot-chip" id="slotChip">Pane 1</span></div>
-        <button class="dialog-close" id="closeModal" aria-label="Close">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 6 12 12M18 6 6 18"/></svg>
-        </button>
-      </div>
-      <div class="url-row">
-        <input class="urlbox" id="urlInput" type="url" inputmode="url" autocomplete="off" placeholder="Paste a YouTube, Twitch, stream, or website link…" />
-        <button class="btn primary" id="loadPreview">Load</button>
-        <button class="btn external-btn" id="openExternal" title="Open the entered URL in a new tab">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 5h5v5M10 14 19 5"/><path d="M19 13v6H5V5h6"/></svg>
-          Open tab
-        </button>
-      </div>
-      <div class="preview-shell" id="previewShell">
-        <div class="preview-empty" id="previewEmpty">
-          <div><strong>Paste a link to preview it here</strong><span>YouTube links are converted to a clean player automatically. Other sites will load when they permit embedding.</span></div>
-        </div>
-        <iframe id="previewFrame" title="Preview" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" hidden></iframe>
-        <div class="frame-note" id="frameNote" hidden>Use the fullscreen button below to fill this viewer area. Esc returns.</div>
-      </div>
-      <div class="dialog-foot">
-        <div class="hint"><kbd>Esc</kbd> exit viewer / close &nbsp;•&nbsp; some sites block being embedded</div>
-        <div class="foot-actions">
-          <button class="btn" id="previewFullscreen">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"/></svg>
-            Fill viewer
-          </button>
-          <button class="btn primary" id="useView" disabled>Use in pane</button>
-        </div>
+  <button class="gear" id="gear" aria-label="Settings" title="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
+      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V21h-4v-.08A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15 1.7 1.7 0 0 0 3.08 14H3v-4h.08A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63 1.7 1.7 0 0 0 10 3.08V3h4v.08A1.7 1.7 0 0 0 15 4.63a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9 1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/>
+    </svg>
+  </button>
+
+  <aside class="settings" id="settings" aria-label="Multiview settings">
+    <div class="settings-head">
+      <div>
+        <div class="settings-title">Multi Viewer</div>
+        <div class="settings-hint">double-tap Shift to hide/show this control</div>
       </div>
     </div>
-  </section>
+    <div id="slots"></div>
+    <div class="settings-note">
+      Crop & Fit edits the live pane itself: drag to pan, use the mouse wheel to zoom, and press Esc when finished. The iframe is never handed off to another preview, so it stays live.
+    </div>
+  </aside>
 
   <div class="toast" id="toast"></div>
 
-  <script>
-  (() => {
-    const STORAGE_KEY = 'multi-viewer-layout-v1';
-    const state = {
-      panes: [
-        {url:'', embed:'', title:'', type:''},
-        {url:'', embed:'', title:'', type:''},
-        {url:'', embed:'', title:'', type:''},
-        {url:'', embed:'', title:'', type:''}
-      ],
-      audioIndex: null,
-      editingIndex: 0
+<script>
+(() => {
+  const KEY = 'multi-viewer-v3';
+  const blank = () => ({url:'',embed:'',type:'generic',title:'',x:0,y:0,scale:1});
+
+  const state = {
+    panes:[blank(),blank(),blank(),blank()],
+    audioIndex:null,
+    cropIndex:null,
+    gearVisible:false
+  };
+
+  const grid = document.getElementById('grid');
+  const gear = document.getElementById('gear');
+  const settings = document.getElementById('settings');
+  const slots = document.getElementById('slots');
+  const toastEl = document.getElementById('toast');
+
+  const frames = new Array(4).fill(null);
+  let shiftAt = 0;
+  let toastTimer = null;
+  let drag = null;
+
+  const speaker = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 10v4h4l5 4V6l-5 4H5Z"/><path d="M17 9a4 4 0 0 1 0 6m2-9a8 8 0 0 1 0 12"/></svg>';
+
+  function load(){
+    try{
+      const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if(saved && Array.isArray(saved.panes) && saved.panes.length === 4){
+        state.panes = saved.panes.map(p => ({
+          ...blank(),
+          ...p,
+          x:Number(p.x)||0,
+          y:Number(p.y)||0,
+          scale:Math.min(4,Math.max(.35,Number(p.scale)||1))
+        }));
+        state.audioIndex = Number.isInteger(saved.audioIndex) ? saved.audioIndex : null;
+      }
+    }catch(_){}
+  }
+
+  function save(){
+    try{
+      localStorage.setItem(KEY,JSON.stringify({
+        panes:state.panes,
+        audioIndex:state.audioIndex
+      }));
+    }catch(_){}
+  }
+
+  function toast(msg){
+    clearTimeout(toastTimer);
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    toastTimer = setTimeout(()=>toastEl.classList.remove('show'),1500);
+  }
+
+  function escapeHtml(v){
+    return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  }
+
+  function normalize(raw){
+    let value=(raw||'').trim();
+    if(!value) return blank();
+    if(!/^https?:\/\//i.test(value)) value='https://'+value;
+    let u;
+    try{u=new URL(value)}catch(_){return null}
+    const host=u.hostname.replace(/^www\./,'').toLowerCase();
+
+    if(host==='youtube.com'||host.endsWith('.youtube.com')||host==='youtu.be'){
+      let id='';
+      if(host==='youtu.be') id=u.pathname.split('/').filter(Boolean)[0]||'';
+      if(!id&&u.pathname==='/watch') id=u.searchParams.get('v')||'';
+      if(!id&&/^\/(embed|shorts|live)\//.test(u.pathname)) id=u.pathname.split('/')[2]||'';
+      if(id){
+        id=id.replace(/[^a-zA-Z0-9_-]/g,'');
+        const params=new URLSearchParams({
+          autoplay:'1',mute:'1',controls:'1',playsinline:'1',rel:'0',enablejsapi:'1'
+        });
+        return {url:value,embed:'https://www.youtube.com/embed/'+id+'?'+params,title:'YouTube',type:'youtube'};
+      }
+    }
+
+    if(host==='twitch.tv'||host.endsWith('.twitch.tv')){
+      const parts=u.pathname.split('/').filter(Boolean);
+      const parent=location.hostname||'localhost';
+      let src='';
+      let title='Twitch';
+      if(parts[0]==='videos'&&parts[1]){
+        src='https://player.twitch.tv/?video='+encodeURIComponent(parts[1])+'&parent='+encodeURIComponent(parent)+'&autoplay=true&muted=true';
+      }else if(host==='clips.twitch.tv'&&parts[0]){
+        src='https://clips.twitch.tv/embed?clip='+encodeURIComponent(parts[0])+'&parent='+encodeURIComponent(parent)+'&autoplay=true&muted=true';
+      }else if(parts[0]){
+        src='https://player.twitch.tv/?channel='+encodeURIComponent(parts[0])+'&parent='+encodeURIComponent(parent)+'&autoplay=true&muted=true';
+        title='Twitch · '+parts[0];
+      }
+      if(src) return {url:value,embed:src,title,type:'twitch'};
+    }
+
+    return {
+      url:value,
+      embed:value,
+      title:host,
+      type:'generic'
     };
+  }
 
-    const grid = document.getElementById('grid');
-    const modal = document.getElementById('setupModal');
-    const slotChip = document.getElementById('slotChip');
-    const urlInput = document.getElementById('urlInput');
-    let previewFrame = document.getElementById('previewFrame');
-    const previewEmpty = document.getElementById('previewEmpty');
-    const frameNote = document.getElementById('frameNote');
-    const loadPreviewBtn = document.getElementById('loadPreview');
-    const useViewBtn = document.getElementById('useView');
-    const openExternalBtn = document.getElementById('openExternal');
-    const previewFullscreenBtn = document.getElementById('previewFullscreen');
-    const toastEl = document.getElementById('toast');
+  function build(){
+    grid.innerHTML='';
+    for(let i=0;i<4;i++){
+      const pane=document.createElement('article');
+      pane.className='pane';
+      pane.dataset.index=i;
 
-    let previewData = null;
-    let previewLiveFrame = null;
-    let toastTimer = null;
+      const source=document.createElement('div');
+      source.className='source';
+      source.dataset.source=i;
+      pane.appendChild(source);
 
-    const icons = {
-      volume: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 10v4h4l5 4V6l-5 4H5Z"/><path d="M17 9a4 4 0 0 1 0 6m2-9a8 8 0 0 1 0 12"/></svg>',
-      edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 20 4.2-1 10.3-10.3a2 2 0 0 0-2.8-2.8L5.4 16.2 4 20Z"/><path d="m14.5 7 2.8 2.8"/></svg>',
-      reload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7v5h-5"/><path d="M19 12a7 7 0 1 0-1.4 4.2"/></svg>',
-      expand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"/></svg>',
-      close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 6 12 12M18 6 6 18"/></svg>'
-    };
+      const empty=document.createElement('div');
+      empty.className='empty';
+      empty.innerHTML='<div class="empty-inner"><div class="empty-plus">+</div><div class="empty-text">Set Pane '+(i+1)+' URL in settings</div></div>';
+      pane.appendChild(empty);
 
-    function save(){
+      const audio=document.createElement('button');
+      audio.className='audio-button';
+      audio.dataset.audio=i;
+      audio.title='Use audio from pane '+(i+1);
+      audio.innerHTML=speaker;
+      pane.appendChild(audio);
+
+      const hover=document.createElement('div');
+      hover.className='hover-tools';
+      hover.innerHTML='<button class="hover-tool" data-crop="'+i+'">Crop & Fit</button>';
+      pane.appendChild(hover);
+
+      const cropLayer=document.createElement('div');
+      cropLayer.className='crop-layer';
+      cropLayer.dataset.cropLayer=i;
+      pane.appendChild(cropLayer);
+
+      const zoom=document.createElement('div');
+      zoom.className='crop-zoom';
+      zoom.dataset.zoom=i;
+      pane.appendChild(zoom);
+
+      const hud=document.createElement('div');
+      hud.className='crop-hud';
+      hud.innerHTML='<span>Drag to pan · wheel to zoom · Esc to finish</span><button data-fit="'+i+'">Fit</button><button data-reset="'+i+'">Reset</button>';
+      pane.appendChild(hud);
+
+      grid.appendChild(pane);
+
+      if(state.panes[i].embed) mountFrame(i);
+      applyTransform(i);
+      updatePaneChrome(i);
+    }
+    renderSlots();
+    syncAudio();
+  }
+
+  function mountFrame(i){
+    const p=state.panes[i];
+    const source=document.querySelector('[data-source="'+i+'"]');
+    if(!source) return;
+
+    source.innerHTML='';
+    const frame=document.createElement('iframe');
+    frame.className='pane-frame';
+    frame.title='Pane '+(i+1);
+    frame.src=p.embed;
+    frame.allow='autoplay; encrypted-media; fullscreen; picture-in-picture';
+    frame.setAttribute('allowfullscreen','');
+    frame.referrerPolicy='strict-origin-when-cross-origin';
+    source.appendChild(frame);
+    frames[i]=frame;
+
+    frame.addEventListener('load',()=>{
+      // Same-origin pages can expose their current URL; cross-origin pages intentionally cannot.
       try{
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({panes:state.panes,audioIndex:state.audioIndex}));
-      }catch(_){}
-    }
-
-    function restore(){
-      try{
-        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-        if(parsed && Array.isArray(parsed.panes) && parsed.panes.length === 4){
-          state.panes = parsed.panes.map(p => ({
-            url: p?.url || '',
-            embed: p?.embed || '',
-            title: p?.title || '',
-            type: p?.type || ''
-          }));
-          state.audioIndex = Number.isInteger(parsed.audioIndex) ? parsed.audioIndex : null;
+        const href=frame.contentWindow.location.href;
+        if(href && href!=='about:blank'){
+          state.panes[i].url=href;
+          const input=document.querySelector('[data-url="'+i+'"]');
+          if(input) input.value=href;
+          save();
         }
       }catch(_){}
-    }
-
-    function toast(message){
-      clearTimeout(toastTimer);
-      toastEl.textContent = message;
-      toastEl.classList.add('show');
-      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
-    }
-
-    function normalizeInput(raw){
-      let value = (raw || '').trim();
-      if(!value) return null;
-      if(!/^https?:\/\//i.test(value)) value = 'https://' + value;
-
-      let u;
-      try{ u = new URL(value); }catch(_){ return null; }
-      const host = u.hostname.replace(/^www\./,'').toLowerCase();
-
-      // YouTube / youtu.be
-      if(host === 'youtube.com' || host.endsWith('.youtube.com') || host === 'youtu.be'){
-        let id = '';
-        if(host === 'youtu.be') id = u.pathname.split('/').filter(Boolean)[0] || '';
-        if(!id && u.pathname === '/watch') id = u.searchParams.get('v') || '';
-        if(!id && /^\/(embed|shorts|live)\//.test(u.pathname)) id = u.pathname.split('/')[2] || '';
-        if(id){
-          const cleanId = id.replace(/[^a-zA-Z0-9_-]/g,'');
-          const start = parseYouTubeStart(u);
-          const params = new URLSearchParams({
-            autoplay:'1',
-            mute:'1',
-            controls:'1',
-            playsinline:'1',
-            rel:'0',
-            enablejsapi:'1'
-          });
-          if(start) params.set('start', String(start));
-          return {
-            url:value,
-            embed:'https://www.youtube.com/embed/' + cleanId + '?' + params.toString(),
-            title:'YouTube',
-            type:'youtube'
-          };
-        }
+      if(state.panes[i].type==='youtube') {
+        setTimeout(syncAudio,250);
+        setTimeout(syncAudio,850);
       }
+    });
+  }
 
-      // Twitch channels/videos/clips. Twitch requires the parent hostname.
-      if(host === 'twitch.tv' || host.endsWith('.twitch.tv')){
-        const parts = u.pathname.split('/').filter(Boolean);
-        const parent = location.hostname || 'localhost';
-        let src = '';
-        let title = 'Twitch';
-        if(parts[0] === 'videos' && parts[1]){
-          src = 'https://player.twitch.tv/?video=' + encodeURIComponent(parts[1]) + '&parent=' + encodeURIComponent(parent) + '&autoplay=true&muted=true';
-        }else if(host === 'clips.twitch.tv' && parts[0]){
-          src = 'https://clips.twitch.tv/embed?clip=' + encodeURIComponent(parts[0]) + '&parent=' + encodeURIComponent(parent) + '&autoplay=true&muted=true';
-        }else if(parts[0]){
-          src = 'https://player.twitch.tv/?channel=' + encodeURIComponent(parts[0]) + '&parent=' + encodeURIComponent(parent) + '&autoplay=true&muted=true';
-          title = 'Twitch · ' + parts[0];
-        }
-        if(src) return {url:value,embed:src,title,type:'twitch'};
-      }
+  function updatePaneChrome(i){
+    const pane=document.querySelector('.pane[data-index="'+i+'"]');
+    if(!pane) return;
+    const p=state.panes[i];
+    pane.classList.toggle('audio-live',state.audioIndex===i&&!!p.embed);
+    pane.classList.toggle('crop-active',state.cropIndex===i);
+    const empty=pane.querySelector('.empty');
+    if(empty) empty.style.display=p.embed?'none':'grid';
+    const audio=pane.querySelector('.audio-button');
+    if(audio) audio.style.display=p.embed?'grid':'none';
+    const crop=pane.querySelector('[data-crop]');
+    if(crop) crop.style.display=p.embed?'block':'none';
+    const zoom=pane.querySelector('[data-zoom="'+i+'"]');
+    if(zoom) zoom.textContent=Math.round(p.scale*100)+'%';
+  }
 
-      return {
-        url:value,
-        embed:value,
-        title:prettyHost(host),
-        type:'generic'
-      };
-    }
+  function renderSlots(){
+    slots.innerHTML='';
+    state.panes.forEach((p,i)=>{
+      const row=document.createElement('section');
+      row.className='slot';
+      row.innerHTML=
+        '<div class="slot-head">'+
+          '<div class="slot-title">Pane '+(i+1)+'</div>'+
+          '<div class="slot-status">'+(p.embed?escapeHtml(p.title||'Loaded'):'Empty')+'</div>'+
+        '</div>'+
+        '<div class="url-row">'+
+          '<input class="url" data-url="'+i+'" type="url" inputmode="url" autocomplete="off" placeholder="Paste a URL…" value="'+escapeHtml(p.url)+'">'+
+          '<button class="apply" data-apply="'+i+'">Load</button>'+
+        '</div>'+
+        '<div class="slot-actions">'+
+          '<button class="crop-btn" data-settings-crop="'+i+'" '+(p.embed?'':'disabled')+'>Crop & Fit</button>'+
+          '<button class="clear-btn" data-clear="'+i+'" '+(p.embed?'':'disabled')+'>Clear</button>'+
+        '</div>';
+      slots.appendChild(row);
+    });
+  }
 
-    function parseYouTubeStart(u){
-      const raw = u.searchParams.get('t') || u.searchParams.get('start') || '';
-      if(!raw) return 0;
-      if(/^\d+$/.test(raw)) return Number(raw);
-      const m = raw.match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/i);
-      if(!m) return 0;
-      return (Number(m[1]||0)*3600)+(Number(m[2]||0)*60)+Number(m[3]||0);
-    }
-
-    function prettyHost(host){
-      return host.split('.').slice(-2,-1)[0]?.replace(/[-_]/g,' ')?.replace(/\b\w/g,c=>c.toUpperCase()) || host;
-    }
-
-    function render(){
-      grid.innerHTML = '';
-      state.panes.forEach((pane,index) => {
-        const el = document.createElement('article');
-        el.className = 'pane' + (state.audioIndex === index && pane.embed ? ' audio-live' : '');
-        el.dataset.index = index;
-
-        if(!pane.embed){
-          el.innerHTML = '<div class="empty" data-action="add"><div class="plus">+</div><div class="empty-label">Add view</div></div>';
-        }else{
-          el.innerHTML = `
-            <div class="embed-wrap">
-              <iframe class="pane-frame" title="View ${index+1}" src="${escapeAttr(pane.embed)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
-            </div>
-            <div class="click-layer" data-action="audio" title="Click to listen to this pane"></div>
-            <div class="pane-toolbar">
-              <div class="pane-title">${state.audioIndex === index ? '<i class="live-dot"></i>' : ''}<span>${escapeHtml(pane.title || 'View '+(index+1))}</span></div>
-              <div class="pane-tools">
-                <button class="mini" data-action="reload" title="Reload">${icons.reload}</button>
-                <button class="mini" data-action="edit" title="Change source">${icons.edit}</button>
-                <button class="mini" data-action="expand" title="Focus this pane">${icons.expand}</button>
-                <button class="mini" data-action="remove" title="Remove">${icons.close}</button>
-              </div>
-            </div>
-            <div class="audio-badge" title="Audio active">${icons.volume}</div>
-          `;
-        }
-
-        el.addEventListener('click', e => handlePaneClick(e,index,el));
-        grid.appendChild(el);
-      });
-      syncAudio();
-    }
-
-    function handlePaneClick(e,index,el){
-      const action = e.target.closest('[data-action]')?.dataset.action;
-      if(!action) return;
-      e.preventDefault();
-      e.stopPropagation();
-
-      if(action === 'add' || action === 'edit') return openEditor(index);
-      if(action === 'audio') return setAudio(index);
-      if(action === 'remove') return removePane(index);
-      if(action === 'reload'){
-        const frame = el.querySelector('.pane-frame');
-        if(frame) frame.src = state.panes[index].embed;
-        toast('Pane reloaded');
-      }
-      if(action === 'expand'){
-        togglePaneFocus(el);
-      }
-    }
-
-    function setAudio(index){
-      if(!state.panes[index].embed) return;
-      state.audioIndex = index;
+  function setPaneUrl(i,raw){
+    const data=normalize(raw);
+    if(!data){toast('Enter a valid URL');return}
+    if(!data.embed){
+      state.panes[i]=blank();
+      frames[i]=null;
       save();
-      document.querySelectorAll('.pane').forEach((paneEl,i) => {
-        paneEl.classList.toggle('audio-live', i===index);
-        const title = paneEl.querySelector('.pane-title');
-        if(title){
-          const dot = title.querySelector('.live-dot');
-          if(i===index && !dot) title.insertAdjacentHTML('afterbegin','<i class="live-dot"></i>');
-          if(i!==index && dot) dot.remove();
-        }
-      });
-      syncAudio();
-      toast('Audio switched to pane ' + (index+1));
+      build();
+      return;
     }
 
-    function syncAudio(){
-      state.panes.forEach((pane,index) => {
-        if(!pane.embed) return;
-        const frame = document.querySelector('.pane[data-index="'+index+'"] .pane-frame');
-        if(!frame) return;
-        const shouldPlayAudio = state.audioIndex === index;
+    const old=state.panes[i];
+    state.panes[i]={...blank(),...data,x:old.x||0,y:old.y||0,scale:old.scale||1};
+    save();
 
-        if(pane.type === 'youtube'){
-          postYouTube(frame, shouldPlayAudio ? 'unMute' : 'mute');
-        }else if(pane.type === 'twitch'){
-          // Rebuild Twitch player with the requested mute state so only the selected
-          // Twitch pane is intended to carry audio.
-          try{
-            const src = new URL(pane.embed);
-            src.searchParams.set('muted', shouldPlayAudio ? 'false' : 'true');
-            const next = src.toString();
-            if(frame.src !== next) frame.src = next;
-          }catch(_){}
-        }
-      });
-    }
-
-    function postYouTube(frame,func){
-      const message = JSON.stringify({event:'command',func,args:[]});
-      // YouTube can receive this before ready; retry briefly without blocking UI.
-      [0,250,700,1400].forEach(delay => setTimeout(() => {
-        try{ frame.contentWindow.postMessage(message,'*'); }catch(_){}
-      },delay));
-    }
-
-    function removePane(index){
-      state.panes[index] = {url:'',embed:'',title:'',type:''};
-      if(state.audioIndex === index) state.audioIndex = null;
-      save();
-      render();
-    }
-
-    function togglePaneFocus(el){
-      const isFocused = el.classList.toggle('focused');
-      document.body.classList.toggle('has-focused-pane',isFocused);
-      if(isFocused){
-        const exit = document.createElement('button');
-        exit.className = 'btn fullscreen-exit';
-        exit.innerHTML = icons.close + '<span>Exit focus</span>';
-        exit.onclick = ev => { ev.stopPropagation(); togglePaneFocus(el); };
-        el.appendChild(exit);
-      }else{
-        el.querySelector('.fullscreen-exit')?.remove();
-      }
-    }
-
-    function openEditor(index){
-      state.editingIndex = index;
-      slotChip.textContent = 'Pane ' + (index+1);
-      const existing = state.panes[index];
-      urlInput.value = existing.url || '';
-      previewData = existing.embed ? {...existing} : null;
-      modal.classList.add('open');
-      modal.setAttribute('aria-hidden','false');
-      document.body.style.overflow = 'hidden';
-      if(existing.embed){
-        showPreview(existing);
-      }else{
-        clearPreview();
-      }
-      setTimeout(() => urlInput.focus(),40);
-    }
-
-    function closeEditor(commit=false){
-      if(commit && previewData){
-        // Keep the exact live frame when possible so navigation inside the popup
-        // does not jump back to the originally pasted URL.
-        const currentIndex = state.editingIndex;
-        state.panes[currentIndex] = {...previewData};
-        if(state.audioIndex == null) state.audioIndex = currentIndex;
+    const source=document.querySelector('[data-source="'+i+'"]');
+    if(source){
+      mountFrame(i);
+      applyTransform(i);
+      updatePaneChrome(i);
+      renderSlots();
+      if(state.audioIndex==null){
+        state.audioIndex=i;
         save();
+      }
+      syncAudio();
+    }else{
+      build();
+    }
+  }
 
-        const liveFrame = previewFrame;
-        liveFrame.hidden = false;
-        liveFrame.removeAttribute('id');
-        liveFrame.className = 'pane-frame';
+  function clearPane(i){
+    if(state.cropIndex===i) exitCrop();
+    state.panes[i]=blank();
+    frames[i]=null;
+    if(state.audioIndex===i) state.audioIndex=null;
+    save();
+    build();
+  }
 
-        render();
-        const wrap = document.querySelector('.pane[data-index="'+currentIndex+'"] .embed-wrap');
-        const newFrame = wrap?.querySelector('.pane-frame');
-        if(wrap){
-          newFrame?.remove();
-          wrap.appendChild(liveFrame);
-        }
+  function applyTransform(i){
+    const p=state.panes[i];
+    const source=document.querySelector('[data-source="'+i+'"]');
+    if(!source) return;
+    source.style.transform='translate('+p.x+'px,'+p.y+'px) scale('+p.scale+')';
+    const zoom=document.querySelector('[data-zoom="'+i+'"]');
+    if(zoom) zoom.textContent=Math.round(p.scale*100)+'%';
+  }
 
-        // Recreate the popup's preview browser after moving the live one.
-        const freshFrame = document.createElement('iframe');
-        freshFrame.id = 'previewFrame';
-        freshFrame.title = 'Preview';
-        freshFrame.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
-        freshFrame.setAttribute('allowfullscreen','');
-        freshFrame.referrerPolicy = 'strict-origin-when-cross-origin';
-        freshFrame.hidden = true;
-        document.getElementById('previewShell').insertBefore(freshFrame, frameNote);
-        previewFrame = freshFrame;
+  function enterCrop(i){
+    if(!state.panes[i].embed) return;
+    state.cropIndex=i;
+    settings.classList.remove('open');
+    for(let n=0;n<4;n++) updatePaneChrome(n);
+    toast('Crop mode · drag, wheel to zoom, Esc to finish');
+  }
 
-        syncAudio();
+  function exitCrop(){
+    if(state.cropIndex==null) return;
+    state.cropIndex=null;
+    drag=null;
+    save();
+    for(let n=0;n<4;n++) updatePaneChrome(n);
+  }
+
+  function fitPane(i){
+    state.panes[i].x=0;
+    state.panes[i].y=0;
+    state.panes[i].scale=1;
+    applyTransform(i);
+    save();
+  }
+
+  function resetPane(i){ fitPane(i); }
+
+  function setAudio(i){
+    if(!state.panes[i].embed) return;
+    state.audioIndex=i;
+    save();
+    for(let n=0;n<4;n++) updatePaneChrome(n);
+    syncAudio();
+  }
+
+  function postYT(frame,func){
+    if(!frame) return;
+    const msg=JSON.stringify({event:'command',func,args:[]});
+    try{frame.contentWindow.postMessage(msg,'*')}catch(_){}
+  }
+
+  function syncAudio(){
+    state.panes.forEach((p,i)=>{
+      const frame=frames[i];
+      if(!frame||!p.embed) return;
+      const on=state.audioIndex===i;
+
+      if(p.type==='youtube'){
+        postYT(frame,on?'unMute':'mute');
+      }else if(p.type==='twitch'){
+        // Twitch is reloaded only when its audio state actually needs to change.
+        try{
+          const u=new URL(frame.src);
+          const desired=on?'false':'true';
+          if(u.searchParams.get('muted')!==desired){
+            u.searchParams.set('muted',desired);
+            frame.src=u.toString();
+          }
+        }catch(_){}
+      }
+    });
+  }
+
+  gear.addEventListener('click',()=>{
+    settings.classList.toggle('open');
+  });
+
+  slots.addEventListener('click',e=>{
+    const apply=e.target.closest('[data-apply]');
+    if(apply){
+      const i=Number(apply.dataset.apply);
+      const input=document.querySelector('[data-url="'+i+'"]');
+      setPaneUrl(i,input.value);
+      return;
+    }
+
+    const crop=e.target.closest('[data-settings-crop]');
+    if(crop){enterCrop(Number(crop.dataset.settingsCrop));return}
+
+    const clear=e.target.closest('[data-clear]');
+    if(clear){clearPane(Number(clear.dataset.clear));return}
+  });
+
+  slots.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&e.target.matches('[data-url]')){
+      e.preventDefault();
+      setPaneUrl(Number(e.target.dataset.url),e.target.value);
+    }
+  });
+
+  grid.addEventListener('click',e=>{
+    const audio=e.target.closest('[data-audio]');
+    if(audio){e.preventDefault();e.stopPropagation();setAudio(Number(audio.dataset.audio));return}
+
+    const crop=e.target.closest('[data-crop]');
+    if(crop){e.preventDefault();e.stopPropagation();enterCrop(Number(crop.dataset.crop));return}
+
+    const fit=e.target.closest('[data-fit]');
+    if(fit){e.preventDefault();e.stopPropagation();fitPane(Number(fit.dataset.fit));return}
+
+    const reset=e.target.closest('[data-reset]');
+    if(reset){e.preventDefault();e.stopPropagation();resetPane(Number(reset.dataset.reset));return}
+  });
+
+  grid.addEventListener('pointerdown',e=>{
+    const layer=e.target.closest('[data-crop-layer]');
+    if(!layer) return;
+    const i=Number(layer.dataset.cropLayer);
+    if(state.cropIndex!==i) return;
+
+    const p=state.panes[i];
+    drag={i,startX:e.clientX,startY:e.clientY,x:p.x,y:p.y};
+    layer.classList.add('dragging');
+    layer.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  grid.addEventListener('pointermove',e=>{
+    if(!drag) return;
+    const p=state.panes[drag.i];
+    p.x=drag.x+(e.clientX-drag.startX);
+    p.y=drag.y+(e.clientY-drag.startY);
+    applyTransform(drag.i);
+  });
+
+  grid.addEventListener('pointerup',e=>{
+    if(!drag) return;
+    const layer=document.querySelector('[data-crop-layer="'+drag.i+'"]');
+    layer?.classList.remove('dragging');
+    drag=null;
+    save();
+  });
+
+  grid.addEventListener('wheel',e=>{
+    const layer=e.target.closest('[data-crop-layer]');
+    if(!layer) return;
+    const i=Number(layer.dataset.cropLayer);
+    if(state.cropIndex!==i) return;
+    e.preventDefault();
+
+    const p=state.panes[i];
+    const pane=layer.closest('.pane');
+    const rect=pane.getBoundingClientRect();
+    const px=e.clientX-(rect.left+rect.width/2);
+    const py=e.clientY-(rect.top+rect.height/2);
+
+    const old=p.scale;
+    const factor=e.deltaY<0?1.08:1/1.08;
+    const next=Math.min(4,Math.max(.35,old*factor));
+    const ratio=next/old;
+
+    p.x=px-(px-p.x)*ratio;
+    p.y=py-(py-p.y)*ratio;
+    p.scale=next;
+    applyTransform(i);
+    save();
+  },{passive:false});
+
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Shift'){
+      const now=performance.now();
+      if(now-shiftAt<430){
+        state.gearVisible=!state.gearVisible;
+        gear.classList.toggle('visible',state.gearVisible);
+        if(!state.gearVisible) settings.classList.remove('open');
+        shiftAt=0;
       }else{
-        previewFrame.src = 'about:blank';
-        previewFrame.hidden = true;
+        shiftAt=now;
       }
-
-      modal.classList.remove('preview-max');
-      modal.classList.remove('open');
-      modal.setAttribute('aria-hidden','true');
-      document.body.style.overflow = '';
-      previewData = null;
+      return;
     }
 
-    function clearPreview(){
-      previewData = null;
-      previewFrame.src = 'about:blank';
-      previewFrame.hidden = true;
-      previewEmpty.hidden = false;
-      frameNote.hidden = true;
-      useViewBtn.disabled = true;
-    }
-
-    function loadPreview(){
-      const data = normalizeInput(urlInput.value);
-      if(!data){
-        toast('Enter a valid link');
-        urlInput.focus();
-        return;
-      }
-      urlInput.value = data.url;
-      previewData = data;
-      showPreview(data);
-    }
-
-    function showPreview(data){
-      previewEmpty.hidden = true;
-      previewFrame.hidden = false;
-      previewFrame.src = data.embed;
-      frameNote.hidden = false;
-      useViewBtn.disabled = false;
-    }
-
-    function escapeHtml(value){
-      return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-    }
-    function escapeAttr(value){ return escapeHtml(value); }
-
-    function fullscreenPreview(){
-      if(!previewData){ toast('Load a view first'); return; }
-      modal.classList.toggle('preview-max');
-    }
-
-    document.getElementById('closeModal').addEventListener('click', () => closeEditor(false));
-    loadPreviewBtn.addEventListener('click', loadPreview);
-    useViewBtn.addEventListener('click', () => closeEditor(true));
-    previewFullscreenBtn.addEventListener('click', fullscreenPreview);
-
-    urlInput.addEventListener('keydown', e => {
-      if(e.key === 'Enter'){ e.preventDefault(); loadPreview(); }
-    });
-
-    openExternalBtn.addEventListener('click', () => {
-      const data = normalizeInput(urlInput.value);
-      if(!data){ toast('Enter a valid link'); return; }
-      window.open(data.url,'_blank','noopener,noreferrer');
-    });
-
-    modal.addEventListener('mousedown', e => {
-      if(e.target === modal) closeEditor(false);
-    });
-
-    document.getElementById('clearAll').addEventListener('click', () => {
-      if(!state.panes.some(p=>p.embed)) return;
-      state.panes = state.panes.map(() => ({url:'',embed:'',title:'',type:''}));
-      state.audioIndex = null;
-      save();
-      render();
-      toast('All panes cleared');
-    });
-
-    document.addEventListener('keydown', e => {
-      if(e.key === 'Escape' && modal.classList.contains('preview-max')){
+    if(e.key==='Escape'){
+      if(state.cropIndex!=null){
         e.preventDefault();
-        modal.classList.remove('preview-max');
+        exitCrop();
         return;
       }
-      if(e.key === 'Escape' && modal.classList.contains('open')){
-        closeEditor(false);
+      if(settings.classList.contains('open')){
+        settings.classList.remove('open');
       }
-    }, true);
+    }
+  },true);
 
-    restore();
-    render();
-  })();
-  </script>
+  document.addEventListener('click',e=>{
+    if(settings.classList.contains('open')&&!settings.contains(e.target)&&!gear.contains(e.target)){
+      settings.classList.remove('open');
+    }
+  });
+
+  load();
+  build();
+})();
+</script>
 </body>
 </html>
