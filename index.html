@@ -321,7 +321,7 @@
     const modal = document.getElementById('setupModal');
     const slotChip = document.getElementById('slotChip');
     const urlInput = document.getElementById('urlInput');
-    const previewFrame = document.getElementById('previewFrame');
+    let previewFrame = document.getElementById('previewFrame');
     const previewEmpty = document.getElementById('previewEmpty');
     const frameNote = document.getElementById('frameNote');
     const loadPreviewBtn = document.getElementById('loadPreview');
@@ -603,6 +603,18 @@
           newFrame?.remove();
           wrap.appendChild(liveFrame);
         }
+
+        // Recreate the popup's preview browser after moving the live one.
+        const freshFrame = document.createElement('iframe');
+        freshFrame.id = 'previewFrame';
+        freshFrame.title = 'Preview';
+        freshFrame.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
+        freshFrame.setAttribute('allowfullscreen','');
+        freshFrame.referrerPolicy = 'strict-origin-when-cross-origin';
+        freshFrame.hidden = true;
+        document.getElementById('previewShell').insertBefore(freshFrame, frameNote);
+        previewFrame = freshFrame;
+
         syncAudio();
       }else{
         previewFrame.src = 'about:blank';
