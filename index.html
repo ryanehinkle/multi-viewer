@@ -81,10 +81,15 @@
       grid-template-columns:minmax(0,1fr) minmax(0,1fr);
       grid-template-rows:minmax(0,1fr) minmax(0,1fr);
       gap:8px;
+      place-items:center;
+      overflow:hidden;
     }
 
     .pane{
       position:relative;
+      width:100%;
+      max-height:100%;
+      aspect-ratio:16/9;
       min-width:0;min-height:0;
       overflow:hidden;
       border:1px solid var(--line);
@@ -131,7 +136,7 @@
       display:flex;align-items:center;justify-content:space-between;gap:8px;
       opacity:0;transform:translateY(-4px);pointer-events:none;transition:.18s ease;
     }
-    .pane:hover .pane-toolbar,.pane.audio-live .pane-toolbar{opacity:1;transform:none;pointer-events:auto}
+    .pane:hover .pane-toolbar{opacity:1;transform:none;pointer-events:auto}
     .pane-title{
       max-width:min(48%,320px);height:29px;border-radius:8px;padding:0 10px;
       display:flex;align-items:center;gap:7px;overflow:hidden;
@@ -149,13 +154,13 @@
     .mini:hover{background:rgba(31,34,40,.92);border-color:rgba(255,255,255,.18)}
     .mini svg{width:14px;height:14px}
     .audio-badge{
-      position:absolute;z-index:7;left:10px;bottom:10px;height:27px;padding:0 9px;border-radius:8px;
-      display:flex;align-items:center;gap:6px;background:rgba(8,9,11,.72);border:1px solid rgba(255,255,255,.09);
-      backdrop-filter:blur(12px);font-size:10px;font-weight:750;color:#cfd3d8;opacity:0;transition:.18s ease;
+      position:absolute;z-index:7;left:10px;bottom:10px;width:28px;height:28px;border-radius:8px;
+      display:grid;place-items:center;background:rgba(8,9,11,.72);border:1px solid rgba(255,255,255,.09);
+      backdrop-filter:blur(12px);color:#cfd3d8;opacity:0;transition:.18s ease;
       pointer-events:none;
     }
     .audio-live .audio-badge{opacity:1;color:#ffd7db;border-color:rgba(242,163,171,.30);background:rgba(45,20,24,.56)}
-    .audio-badge svg{width:13px;height:13px}
+    .audio-badge svg{width:14px;height:14px}
 
     .modal{
       position:fixed;inset:0;z-index:100;display:none;place-items:center;padding:18px;
@@ -187,6 +192,13 @@
     .primary:disabled{opacity:.48;cursor:not-allowed}
 
     .preview-shell{position:relative;min-height:0;background:#020303;overflow:hidden}
+    .modal.preview-max{padding:0;background:#020303}
+    .modal.preview-max .dialog{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;border:0;border-radius:0;grid-template-rows:minmax(0,1fr);background:#020303}
+    .modal.preview-max .dialog-head,
+    .modal.preview-max .url-row,
+    .modal.preview-max .dialog-foot{display:none}
+    .modal.preview-max .preview-shell{position:absolute;inset:0}
+    .modal.preview-max .frame-note{display:none}
     .preview-shell iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
     .preview-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:28px;color:#858b94}
     .preview-empty strong{display:block;color:#d7dadd;font-size:15px;margin-bottom:7px}
@@ -274,14 +286,14 @@
           <div><strong>Paste a link to preview it here</strong><span>YouTube links are converted to a clean player automatically. Other sites will load when they permit embedding.</span></div>
         </div>
         <iframe id="previewFrame" title="Preview" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" hidden></iframe>
-        <div class="frame-note" id="frameNote" hidden>Tip: press F11 here to fullscreen this preview area, then Esc to return.</div>
+        <div class="frame-note" id="frameNote" hidden>Use the fullscreen button below to fill this viewer area. Esc returns.</div>
       </div>
       <div class="dialog-foot">
-        <div class="hint"><kbd>F11</kbd> fullscreen preview &nbsp;•&nbsp; <kbd>Esc</kbd> exit fullscreen / close &nbsp;•&nbsp; some sites block being embedded</div>
+        <div class="hint"><kbd>Esc</kbd> exit viewer / close &nbsp;•&nbsp; some sites block being embedded</div>
         <div class="foot-actions">
           <button class="btn" id="previewFullscreen">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"/></svg>
-            Fullscreen preview
+            Fill viewer
           </button>
           <button class="btn primary" id="useView" disabled>Use in pane</button>
         </div>
@@ -319,6 +331,7 @@
     const toastEl = document.getElementById('toast');
 
     let previewData = null;
+    let previewLiveFrame = null;
     let toastTimer = null;
 
     const icons = {
@@ -455,7 +468,7 @@
                 <button class="mini" data-action="remove" title="Remove">${icons.close}</button>
               </div>
             </div>
-            <div class="audio-badge">${icons.volume}<span>LISTENING</span></div>
+            <div class="audio-badge" title="Audio active">${icons.volume}</div>
           `;
         }
 
@@ -571,17 +584,35 @@
 
     function closeEditor(commit=false){
       if(commit && previewData){
-        state.panes[state.editingIndex] = {...previewData};
-        if(state.audioIndex == null) state.audioIndex = state.editingIndex;
+        // Keep the exact live frame when possible so navigation inside the popup
+        // does not jump back to the originally pasted URL.
+        const currentIndex = state.editingIndex;
+        state.panes[currentIndex] = {...previewData};
+        if(state.audioIndex == null) state.audioIndex = currentIndex;
         save();
+
+        const liveFrame = previewFrame;
+        liveFrame.hidden = false;
+        liveFrame.removeAttribute('id');
+        liveFrame.className = 'pane-frame';
+
         render();
+        const wrap = document.querySelector('.pane[data-index="'+currentIndex+'"] .embed-wrap');
+        const newFrame = wrap?.querySelector('.pane-frame');
+        if(wrap){
+          newFrame?.remove();
+          wrap.appendChild(liveFrame);
+        }
+        syncAudio();
+      }else{
+        previewFrame.src = 'about:blank';
+        previewFrame.hidden = true;
       }
-      if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+
+      modal.classList.remove('preview-max');
       modal.classList.remove('open');
       modal.setAttribute('aria-hidden','true');
       document.body.style.overflow = '';
-      previewFrame.src = 'about:blank';
-      previewFrame.hidden = true;
       previewData = null;
     }
 
@@ -619,14 +650,9 @@
     }
     function escapeAttr(value){ return escapeHtml(value); }
 
-    async function fullscreenPreview(){
+    function fullscreenPreview(){
       if(!previewData){ toast('Load a view first'); return; }
-      try{
-        if(!document.fullscreenElement) await document.getElementById('previewShell').requestFullscreen();
-        else await document.exitFullscreen();
-      }catch(_){
-        toast('Fullscreen was blocked by the browser');
-      }
+      modal.classList.toggle('preview-max');
     }
 
     document.getElementById('closeModal').addEventListener('click', () => closeEditor(false));
@@ -658,11 +684,12 @@
     });
 
     document.addEventListener('keydown', e => {
-      if(e.key === 'F11' && modal.classList.contains('open')){
+      if(e.key === 'Escape' && modal.classList.contains('preview-max')){
         e.preventDefault();
-        fullscreenPreview();
+        modal.classList.remove('preview-max');
+        return;
       }
-      if(e.key === 'Escape' && modal.classList.contains('open') && !document.fullscreenElement){
+      if(e.key === 'Escape' && modal.classList.contains('open')){
         closeEditor(false);
       }
     }, true);
