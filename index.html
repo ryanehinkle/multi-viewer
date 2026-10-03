@@ -73,8 +73,7 @@
 
     .source{
       position:absolute;
-      left:50%;
-      top:50%;
+      inset:0;
       transform-origin:center center;
       will-change:transform;
       background:#000;
@@ -352,7 +351,7 @@
 <script>
 (() => {
   const KEY = 'multi-viewer-v3';
-  const blank = () => ({url:'',embed:'',type:'generic',title:'',x:0,y:0,scale:1,renderScale:4});
+  const blank = () => ({url:'',embed:'',type:'generic',title:'',x:0,y:0,scale:1});
 
   const state = {
     panes:[blank(),blank(),blank(),blank()],
@@ -581,11 +580,6 @@
         '</div>'+
         '<div class="slot-actions">'+
           '<button class="crop-btn" data-settings-crop="'+i+'" '+(p.embed?'':'disabled')+'>Crop & Fit</button>'+
-          '<select class="clear-btn" data-render-scale="'+i+'" title="Virtual render resolution">'+
-            '<option value="1" '+(p.renderScale===1?'selected':'')+'>1× render</option>'+
-            '<option value="2" '+(p.renderScale===2?'selected':'')+'>2× render</option>'+
-            '<option value="4" '+(p.renderScale===4?'selected':'')+'>4× render</option>'+
-          '</select>'+
           '<button class="clear-btn" data-clear="'+i+'" '+(p.embed?'':'disabled')+'>Clear</button>'+
         '</div>';
       slots.appendChild(row);
@@ -636,14 +630,13 @@
     const p=state.panes[i];
     const source=document.querySelector('[data-source="'+i+'"]');
     if(!source) return;
-    const rs=Math.min(4,Math.max(1,Number(p.renderScale)||4));
-    source.style.width=(rs*100)+'%';
-    source.style.height=(rs*100)+'%';
-    source.style.marginLeft=(-rs*50)+'%';
-    source.style.marginTop=(-rs*50)+'%';
-    source.style.transform='translate('+p.x+'px,'+p.y+'px) scale('+(p.scale/rs)+')';
+    source.style.width='';
+    source.style.height='';
+    source.style.marginLeft='';
+    source.style.marginTop='';
+    source.style.transform='translate('+p.x+'px,'+p.y+'px) scale('+p.scale+')';
     const zoom=document.querySelector('[data-zoom="'+i+'"]');
-    if(zoom) zoom.textContent=Math.round(p.scale*100)+'% · '+rs+'× render';
+    if(zoom) zoom.textContent=Math.round(p.scale*100)+'%';
   }
 
   function enterCrop(i){
@@ -730,16 +723,6 @@
 
     const clear=e.target.closest('[data-clear]');
     if(clear){clearPane(Number(clear.dataset.clear));return}
-  });
-
-  slots.addEventListener('change',e=>{
-    const sel=e.target.closest('[data-render-scale]');
-    if(!sel) return;
-    const i=Number(sel.dataset.renderScale);
-    state.panes[i].renderScale=Number(sel.value)||4;
-    applyTransform(i);
-    save();
-    toast('Pane '+(i+1)+' virtual render set to '+state.panes[i].renderScale+'×');
   });
 
   slots.addEventListener('keydown',e=>{
